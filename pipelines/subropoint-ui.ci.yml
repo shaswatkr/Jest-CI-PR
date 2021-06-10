@@ -1,0 +1,100 @@
+trigger: 
+- master
+
+pr: none
+
+jobs:
+- job: Fortify  
+  pool:
+    name: TFSFortify
+  steps:
+  - task: fortifyvsts.hpe-security-fortify-vsts.build-task-fortify-sca.FortifySCA@5
+    displayName: 'Run Fortify on '
+    inputs:
+      licenseFile: 'E:\Installs\Fortify\fortify.license'
+      applicationType: other
+      buildAnalyzerParams: '-exclude "**/core/lib/**/*;**/assets/**/*" -disable-language abap:actionscript:apex:cfml:cpp:cobol:configuration:dotnet:java:jsp:objc:php:plsql:python:ruby:scala:sql:swift:tsql:typescript:vb -verbose -D"com.fortify.sca.EnableDOMModeling"=true'
+      fortifySourceTranslate: 'app/**/*'
+      fortifyBuildId: '$(Build.BuildId)'
+      runFortifyRulepackUpdate: true
+      scaVerbose: true
+      runFortifyUpload: true
+      fortifyServerName: FortifyCloudScan
+      fortifyApplicationName: 'SubroPoint_UHGWM110-025319'
+      fortifyApplicationVersion: UI
+  - powershell: |
+      $pathToFpr="$(build.artifactstagingdirectory)/sca_artifacts/$(Build.BuildId).fpr"
+      BIRTReportGenerator -template "OWASP Top 10" -source "$pathToFpr" -output "$(build.artifactstagingdirectory)/sca_artifacts/$(Build.BuildId).owasp.pdf" -format PDF -showSuppressed -Version "OWASP Top 10 2017"
+    displayName: 'PowerShell Script'
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: FortifyResults'
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)/sca_artifacts'
+      ArtifactName: FortifyResults
+- job: Sonar  
+  pool:
+    name: default
+  steps:
+  - task: SonarQubePrepare@4
+    displayName: 'Prepare analysis on SonarQube'
+    inputs:
+      SonarQube: SonarOptum
+      scannerMode: CLI
+      configMode: manual
+      cliProjectKey: 'com.optum.subrogation:SubroPointUI'
+      cliProjectName: 'SubroPoint UI'
+      cliSources: app
+      extraProperties: |     
+        sonar.links.scm = $(Build.Repository.Uri)
+        sonar.links.ci = $(Build.BuildUri) 
+        sonar.exclusions = /app/assets/js/**/*
+  - task: SonarQubeAnalyze@4
+    displayName: 'Run Code Analysis'
+    continueOnError: true
+  - task: SonarQubePublish@4
+    displayName: 'Publish Quality Gate Result'
+- job: BuildAndUploadArtifacts
+  displayName: Build And Upload Artifacts
+  dependsOn:
+    - Fortify
+    - Sonar
+  pool:
+    name: Subrogation Default
+  steps:
+  - task: ArtifactoryNpm@2
+    displayName: 'Artifactory npm install'
+    inputs:
+      artifactoryService: Repo1
+      sourceRepo: 'npm-virtual'
+  - task: Gulp@0
+    displayName: 'Run gulp task'
+    inputs:
+      targets: frg
+      arguments: '--product=qa --client=frg'
+  - task: ArchiveFiles@2
+    displayName: 'Archive files'
+    inputs:
+      rootFolderOrFile: dist
+      includeRootFolder: false
+      archiveFile: '$(Build.ArtifactStagingDirectory)/v$(Build.BuildNumber)/web.zip'
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish artifacts: drop'
+# Why is this script needed?
+  - script: |
+      rmdir /Q /S dist    
+    displayName: 'Cleanup build folder'
+
+- job: ReportBuildMetrics
+  displayName: Report Build Metrics
+  condition: always()
+  dependsOn:
+    - BuildAndUploadArtifacts
+  pool:
+    name: default
+  steps:
+  - task: PowerShell@2
+    displayName: 'Report Build Metrics'
+    condition: always()
+    inputs:
+      targetType: inline
+      script: Import-Module -Name ./pipelines/DevOpsMetrics; Send-BuildEvent; AutoSend-DevOpsEvents;

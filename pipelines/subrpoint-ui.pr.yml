@@ -1,0 +1,47 @@
+trigger: none
+
+pr:
+- master
+
+pool:
+  name: default
+
+steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install packages
+      run: npm i
+    
+    - name: Run Test
+      run: npm t
+
+steps:
+- task: ArtifactoryNpm@2
+  displayName: 'Artifactory npm install'
+  inputs:
+    artifactoryService: Repo1
+    sourceRepo: 'npm-virtual'  
+- task: SonarQubePrepare@4
+  displayName: 'Prepare analysis on SonarQube'
+  inputs:
+    SonarQube: sonar.optum.com
+    scannerMode: CLI
+    configMode: manual
+    cliProjectKey: 'com.optum.subrogation:SubroPointUI'
+    cliProjectName: 'SubroPoint UI'
+    cliSources: app
+    extraProperties: |     
+     sonar.exclusions=**/node_modules/**,**/app/assets/**,**/app/core/** 
+     sonar.links.scm = $(Build.Repository.Uri)
+     sonar.links.ci = $(Build.BuildUri) 
+- task: SonarQubeAnalyze@4
+  displayName: 'Run Code Analysis'
+- task: SonarQubePublish@4
+  displayName: 'Publish Quality Gate Result' 
+- task: PowerShell@2
+  displayName: 'Report Build Metrics'
+  condition: always()
+  inputs:
+    targetType: inline
+    script: Import-Module -Name ./pipelines/DevOpsMetrics; Send-BuildEvent; AutoSend-DevOpsEvents;

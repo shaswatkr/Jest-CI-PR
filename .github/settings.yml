@@ -1,0 +1,65 @@
+# These settings are synced to GitHub by https://probot.github.io/apps/settings/
+
+repository:
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_downloads: true
+  allow_squash_merge: true
+  allow_merge_commit: true
+  allow_rebase_merge: true
+  default_branch: master
+  topics: subrogation, defaultfiles, subropointmigration 
+
+labels:
+  - name: bug
+    color: d73a4a
+    description: Something isn't working
+  - name: duplicate
+    color: cfd3d7
+    description: This issue or pull request already exists
+  - name: enhancement
+    color: a2eeef
+    description: New feature or request
+  - name: question
+    color: d876e3
+    description: Further information is requested
+  - name: subrogation
+    color: ededed
+    description: This issue or pull request is owned by the Subrogation Team
+  - name: WIP
+    color: 111111
+    description: This item is not yet ready for a full review
+  - name: wontfix
+    color: ffffff
+    description: This will not be worked on
+  - name: Do Not Merge
+    color: d93f0b
+    description: This PR should not be merged for some reason. If applied, an explanation should be added to the PR.
+
+teams:
+  - name: subro_dev
+    permission: write
+  - name: Subrogation_Repository_Writer
+    permission: write
+  - name: Subrogation
+    permission: read
+  - name: SubrogationAdmin
+    permission: admin
+
+branches:
+  - name: master
+    protection:
+      required_status_checks:
+        strict: true
+        contexts: ["WIP", "SubroPoint-UI.PR", "SonarQube Code Analysis", "Jest"]
+      enforce_admins: false
+      # TODO: change to true after discussion?
+      required_linear_history: false
+      required_pull_request_reviews:
+        dismissal_restrictions: {}
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        required_approving_review_count: 1
+      restrictions: null
