@@ -1,6 +1,6 @@
 {
     "name": "angularjs-boilerplate",
-    "version": "1.0.9",
+    "version": "1.0.0",
     "license": "MIT",
     "description": "An AngularJS Boilerplate to start your project with Jest Unit Testing and Code Coverage and Gulp watch/build tasks",
     "main": "app/app.js",
