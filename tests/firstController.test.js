@@ -47,7 +47,7 @@ describe('Math service', function () {
         it("Nested function", function () {
             var total = $scope.callAnotherFunction();
 
-            expect(total).toEqual(3);
+            expect(total).toEqual(30);
         });
 
         it("Mock function", function () {
