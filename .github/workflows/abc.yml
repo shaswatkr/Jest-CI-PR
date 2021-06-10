@@ -2,7 +2,7 @@ name: CI
 on: push
 jobs:
   eslint:
-    name: Lint code base
+    name: Jest Unit Test
     runs-on: ubuntu-latest
 
     steps:
